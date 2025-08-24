@@ -1,0 +1,527 @@
+GetThis.Money - Technical Documentation
+=====================================
+
+Author: Ryan Coleman <coleman.ryan@gmail.com>
+Version: 1.0.0
+License: MIT
+
+TABLE OF CONTENTS
+=================
+1. System Architecture
+2. Database Schema
+3. API Endpoints
+4. Authentication & OAuth2
+5. Business Logic
+6. Frontend Components
+7. Security Implementation
+8. Deployment Guide
+9. Troubleshooting
+
+1. SYSTEM ARCHITECTURE
+======================
+
+The GetThis.Money application follows a modern full-stack architecture:
+
+Frontend (React + TypeScript):
+- React 18 with TypeScript
+- Tailwind CSS for styling
+- React Router for navigation
+- Axios for API communication
+- JWT token management
+
+Backend (Node.js + Express):
+- Express.js server
+- MongoDB with Mongoose ODM
+- JWT authentication
+- OAuth2 integration (Google, GitHub, Facebook)
+- Passport.js for authentication strategies
+- Rate limiting and security middleware
+
+Database:
+- MongoDB for data persistence
+- Mongoose schemas with validation
+- Indexed collections for performance
+
+2. DATABASE SCHEMA
+==================
+
+USER COLLECTION
+---------------
+{
+  _id: ObjectId,
+  email: String (required, unique, lowercase),
+  password: String (hashed, required if not OAuth),
+  firstName: String (required),
+  lastName: String (required),
+  username: String (unique, optional),
+  
+  // OAuth2 fields
+  oauthProvider: String (enum: ['google', 'github', 'facebook', null]),
+  oauthId: String (sparse index),
+  oauthProfile: Mixed,
+  
+  // Profile fields
+  avatar: String,
+  bio: String (max 500 chars),
+  location: String,
+  website: String,
+  
+  // Business preferences
+  preferredState: String,
+  preferredIndustry: String,
+  budget: String (enum: ['Low', 'Medium', 'High', '']),
+  experience: String (enum: ['Beginner', 'Intermediate', 'Expert', '']),
+  timeCommitment: String (enum: ['Part-time', 'Full-time', '']),
+  
+  // Account status
+  isEmailVerified: Boolean (default: false),
+  emailVerificationToken: String,
+  emailVerificationExpires: Date,
+  passwordResetToken: String,
+  passwordResetExpires: Date,
+  
+  // Subscription and usage
+  subscription: String (enum: ['free', 'premium', 'enterprise']),
+  subscriptionExpires: Date,
+  ideasGenerated: Number (default: 0),
+  ideasSaved: Number (default: 0),
+  
+  // Timestamps
+  lastLogin: Date,
+  loginCount: Number (default: 0),
+  createdAt: Date,
+  updatedAt: Date
+}
+
+BUSINESS_IDEA COLLECTION
+------------------------
+{
+  _id: ObjectId,
+  userId: ObjectId (ref: 'User', required),
+  
+  // Idea details
+  title: String (required),
+  description: String (required),
+  industry: String (required),
+  targetMarket: String (required),
+  revenueModel: String (required),
+  startupCost: String (required),
+  timeline: String (required),
+  
+  // Revenue estimates
+  revenueEstimates: {
+    daily: Number (required),
+    weekly: Number (required),
+    monthly: Number (required),
+    quarterly: Number (required),
+    yearly: Number (required)
+  },
+  
+  // Location and tax info
+  state: String (required),
+  taxImplications: String (required),
+  
+  // AI suggestions
+  aiSuggestions: [String],
+  
+  // User preferences used
+  userPreferences: {
+    state: String,
+    industry: String,
+    budget: String,
+    experience: String,
+    timeCommitment: String
+  },
+  
+  // Status and metadata
+  status: String (enum: ['generated', 'saved', 'implemented', 'archived']),
+  isSaved: Boolean (default: false),
+  isShared: Boolean (default: false),
+  isExported: Boolean (default: false),
+  
+  // User interactions
+  rating: Number (1-5),
+  feedback: String (max 1000 chars),
+  tags: [String],
+  notes: String (max 2000 chars),
+  
+  // Custom modifications
+  customRevenueEstimates: {
+    daily: Number,
+    weekly: Number,
+    monthly: Number,
+    quarterly: Number,
+    yearly: Number
+  },
+  customModifications: Mixed,
+  
+  // Sharing and collaboration
+  isPublic: Boolean (default: false),
+  sharedWith: [{
+    userId: ObjectId (ref: 'User'),
+    permission: String (enum: ['view', 'edit', 'admin']),
+    sharedAt: Date
+  }],
+  
+  // Analytics
+  viewCount: Number (default: 0),
+  shareCount: Number (default: 0),
+  exportCount: Number (default: 0),
+  
+  // Timestamps
+  createdAt: Date,
+  updatedAt: Date
+}
+
+3. API ENDPOINTS
+================
+
+AUTHENTICATION ENDPOINTS
+-----------------------
+POST /api/auth/register
+- Register new user with email/password
+- Body: { email, password, firstName, lastName, username? }
+- Returns: { message, token, user }
+
+POST /api/auth/login
+- Login with email/password
+- Body: { email, password }
+- Returns: { message, token, user }
+
+GET /api/auth/google
+- Initiate Google OAuth flow
+- Redirects to Google
+
+GET /api/auth/google/callback
+- Google OAuth callback
+- Redirects to frontend with token
+
+GET /api/auth/github
+- Initiate GitHub OAuth flow
+- Redirects to GitHub
+
+GET /api/auth/github/callback
+- GitHub OAuth callback
+- Redirects to frontend with token
+
+GET /api/auth/facebook
+- Initiate Facebook OAuth flow
+- Redirects to Facebook
+
+GET /api/auth/facebook/callback
+- Facebook OAuth callback
+- Redirects to frontend with token
+
+POST /api/auth/forgot-password
+- Request password reset
+- Body: { email }
+- Returns: { message }
+
+POST /api/auth/reset-password
+- Reset password with token
+- Body: { token, password }
+- Returns: { message }
+
+POST /api/auth/verify-email
+- Verify email with token
+- Body: { token }
+- Returns: { message }
+
+POST /api/auth/resend-verification
+- Resend verification email
+- Body: { email }
+- Returns: { message }
+
+POST /api/auth/logout
+- Logout (client-side token removal)
+- Returns: { message }
+
+GET /api/auth/me
+- Get current user profile
+- Headers: Authorization: Bearer <token>
+- Returns: { user }
+
+USER ENDPOINTS
+--------------
+GET /api/users/profile
+- Get user profile
+- Headers: Authorization: Bearer <token>
+- Returns: { user }
+
+PUT /api/users/profile
+- Update user profile
+- Headers: Authorization: Bearer <token>
+- Body: { firstName?, lastName?, username?, bio?, location?, website? }
+- Returns: { message, user }
+
+PUT /api/users/preferences
+- Update business preferences
+- Headers: Authorization: Bearer <token>
+- Body: { preferredState?, preferredIndustry?, budget?, experience?, timeCommitment? }
+- Returns: { message, user }
+
+PUT /api/users/change-password
+- Change password
+- Headers: Authorization: Bearer <token>
+- Body: { currentPassword, newPassword }
+- Returns: { message }
+
+GET /api/users/ideas
+- Get user's business ideas
+- Headers: Authorization: Bearer <token>
+- Query: { page?, limit?, status? }
+- Returns: { ideas, pagination }
+
+GET /api/users/ideas/saved
+- Get user's saved ideas
+- Headers: Authorization: Bearer <token>
+- Query: { page?, limit? }
+- Returns: { ideas, pagination }
+
+GET /api/users/stats
+- Get user statistics
+- Headers: Authorization: Bearer <token>
+- Returns: { totalIdeas, savedIdeas, sharedIdeas, ideasByIndustry, ideasByState, subscription, ideasGenerated, ideasSaved }
+
+DELETE /api/users/account
+- Delete user account
+- Headers: Authorization: Bearer <token>
+- Body: { password }
+- Returns: { message }
+
+BUSINESS IDEA ENDPOINTS
+-----------------------
+POST /api/business-ideas/generate
+- Generate new business idea
+- Headers: Authorization: Bearer <token>
+- Body: { state, industry, budget, experience, timeCommitment }
+- Returns: { message, idea }
+
+GET /api/business-ideas
+- Get all business ideas (public)
+- Query: { page?, limit?, industry?, state?, status?, isPublic? }
+- Returns: { ideas, pagination }
+
+GET /api/business-ideas/:id
+- Get specific business idea
+- Returns: { idea }
+
+POST /api/business-ideas/:id/save
+- Save business idea
+- Headers: Authorization: Bearer <token>
+- Returns: { message, idea }
+
+PUT /api/business-ideas/:id
+- Update business idea
+- Headers: Authorization: Bearer <token>
+- Body: { title?, description?, notes?, tags?, rating?, feedback? }
+- Returns: { message, idea }
+
+POST /api/business-ideas/:id/share
+- Share business idea
+- Headers: Authorization: Bearer <token>
+- Body: { userId, permission? }
+- Returns: { message, idea }
+
+POST /api/business-ideas/:id/export
+- Export business idea
+- Headers: Authorization: Bearer <token>
+- Returns: { message, exportData }
+
+POST /api/business-ideas/:id/archive
+- Archive business idea
+- Headers: Authorization: Bearer <token>
+- Returns: { message, idea }
+
+POST /api/business-ideas/:id/implement
+- Mark idea as implemented
+- Headers: Authorization: Bearer <token>
+- Returns: { message, idea }
+
+DELETE /api/business-ideas/:id
+- Delete business idea
+- Headers: Authorization: Bearer <token>
+- Returns: { message }
+
+GET /api/business-ideas/industry/:industry
+- Get ideas by industry
+- Query: { page?, limit? }
+- Returns: { ideas, pagination }
+
+GET /api/business-ideas/state/:state
+- Get ideas by state
+- Query: { page?, limit? }
+- Returns: { ideas, pagination }
+
+4. AUTHENTICATION & OAUTH2
+==========================
+
+JWT TOKEN STRUCTURE
+-------------------
+{
+  id: "user_id",
+  email: "user@example.com",
+  subscription: "free|premium|enterprise",
+  iat: timestamp,
+  exp: timestamp
+}
+
+OAUTH2 FLOW
+-----------
+1. User clicks OAuth button
+2. Redirect to provider (Google/GitHub/Facebook)
+3. User authorizes application
+4. Provider redirects to callback URL
+5. Server exchanges code for access token
+6. Server gets user profile from provider
+7. Server creates/updates user in database
+8. Server generates JWT token
+9. Redirect to frontend with token
+10. Frontend stores token and updates state
+
+OAUTH2 PROVIDERS
+----------------
+- Google: passport-google-oauth20
+- GitHub: passport-github2
+- Facebook: passport-facebook
+
+5. BUSINESS LOGIC
+=================
+
+REVENUE ESTIMATION ALGORITHM
+----------------------------
+Base Revenue × State Multiplier × Budget Multiplier × Experience Multiplier = Final Revenue
+
+Base Revenue by Industry:
+- Technology & Software: $1,500/day
+- E-commerce & Retail: $600/day
+- Health & Wellness: $450/day
+- Education & Training: $300/day
+- Food & Beverage: $750/day
+- Real Estate: $900/day
+- Financial Services: $1,200/day
+- Marketing & Advertising: $600/day
+- Professional Services: $900/day
+- Entertainment & Media: $450/day
+
+Multipliers:
+- State: Business-friendly (1.1), High-tax (0.9)
+- Budget: High (1.2), Medium (1.0), Low (0.8)
+- Experience: Expert (1.3), Intermediate (1.1), Beginner (0.9)
+
+AI SUGGESTION GENERATION
+------------------------
+Based on user preferences:
+- State business-friendliness
+- Industry growth rates
+- Budget constraints
+- Experience level
+- Time commitment
+
+6. FRONTEND COMPONENTS
+======================
+
+MAIN COMPONENTS
+---------------
+- App.tsx: Main application component
+- Header.tsx: Navigation and branding
+- PreferenceForm.tsx: User input form
+- BusinessIdeaCard.tsx: Idea display
+- Auth components (Login, Register, OAuth)
+- User profile components
+- Dashboard components
+
+STATE MANAGEMENT
+----------------
+- React Hooks for local state
+- Context API for global state (auth, user)
+- Local storage for token persistence
+
+ROUTING
+--------
+- React Router v6
+- Protected routes for authenticated users
+- OAuth callback handling
+
+7. SECURITY IMPLEMENTATION
+==========================
+
+AUTHENTICATION SECURITY
+-----------------------
+- JWT tokens with expiration
+- Password hashing with bcrypt
+- OAuth2 for third-party authentication
+- Session management with MongoDB store
+
+API SECURITY
+------------
+- Rate limiting (100 requests per 15 minutes)
+- CORS configuration
+- Helmet.js for security headers
+- Input validation with express-validator
+- SQL injection prevention (MongoDB)
+
+DATA SECURITY
+-------------
+- Environment variables for secrets
+- HTTPS in production
+- Secure cookie settings
+- XSS protection
+
+8. DEPLOYMENT GUIDE
+===================
+
+DEVELOPMENT
+-----------
+1. Install dependencies
+2. Set up MongoDB
+3. Configure environment variables
+4. Start backend: npm run dev
+5. Start frontend: npm start
+
+PRODUCTION
+----------
+1. Build frontend: npm run build
+2. Set production environment variables
+3. Use PM2 for process management
+4. Configure reverse proxy (nginx)
+5. Set up SSL certificates
+6. Configure MongoDB authentication
+
+DOCKER DEPLOYMENT
+-----------------
+1. Create Dockerfile
+2. Build image: docker build -t getthis-money .
+3. Run container: docker run -p 5000:5000 --env-file .env getthis-money
+
+9. TROUBLESHOOTING
+==================
+
+COMMON ISSUES
+-------------
+- MongoDB connection errors
+- OAuth callback failures
+- JWT token expiration
+- CORS errors
+- Rate limiting exceeded
+
+DEBUGGING
+---------
+- Check server logs
+- Verify environment variables
+- Test API endpoints with Postman
+- Check browser console for frontend errors
+- Verify database connections
+
+PERFORMANCE OPTIMIZATION
+-----------------------
+- Database indexing
+- API response caching
+- Frontend code splitting
+- Image optimization
+- CDN for static assets
+
+---
+
+For additional support, contact: Ryan Coleman <coleman.ryan@gmail.com>
+Project repository: https://github.com/yourusername/getthis.money
