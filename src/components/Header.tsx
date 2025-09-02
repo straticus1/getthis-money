@@ -1,5 +1,6 @@
 import React from 'react';
 import { DollarSign, Zap } from 'lucide-react';
+import Logo from './Logo';
 
 const Header: React.FC = () => {
   return (
@@ -7,6 +8,9 @@ const Header: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
+            {/* Logo placeholder - replace with your actual logo */}
+            <Logo variant="primary" size="medium" />
+            {/* Fallback icons until logo is uploaded */}
             <DollarSign className="h-8 w-8 text-green-400" />
             <Zap className="h-6 w-6 text-yellow-400" />
           </div>

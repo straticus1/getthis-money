@@ -1,4 +1,486 @@
 const express = require('express');
+const BusinessIdea = require('../models/BusinessIdea');
+const AIService = require('../services/aiService');
+const {
+  authenticate,
+  checkSubscription,
+  rateLimits,
+  validationSchemas,
+  handleValidationErrors
+} = require('../middleware/security');
+const { body } = require('express-validator');
+const router = express.Router();
+
+// Initialize AI service
+const aiService = new AIService();
+
+// Generate business idea with AI
+router.post('/generate',
+  authenticate,
+  rateLimits.ideaGeneration,
+  validationSchemas.businessIdea,
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const { preferences } = req.body;
+      const userId = req.user.id;
+
+      // Check if user can generate more ideas
+      if (!req.user.canGenerateIdeas()) {
+        return res.status(403).json({
+          error: 'Idea generation limit reached',
+          limit: req.user.getIdeaLimit(),
+          current: req.user.ideasGenerated,
+          subscription: req.user.subscription
+        });
+      }
+
+      // Generate business idea using AI
+      const businessIdea = await aiService.generateBusinessIdea(preferences, userId);
+
+      // Save to database
+      const savedIdea = new BusinessIdea({
+        userId,
+        ...businessIdea
+      });
+      
+      await savedIdea.save();
+
+      // Update user's idea count
+      await req.user.incrementIdeasGenerated();
+
+      res.json({
+        success: true,
+        idea: savedIdea,
+        isAIGenerated: true,
+        remainingIdeas: req.user.getRemainingIdeas()
+      });
+
+    } catch (error) {
+      console.error('Idea generation error:', error);
+      res.status(500).json({ 
+        error: 'Failed to generate business idea',
+        message: error.message 
+      });
+    }
+  }
+);
+
+// Generate multiple ideas for comparison (Premium feature)
+router.post('/generate-multiple',
+  authenticate,
+  checkSubscription('premium'),
+  rateLimits.ideaGeneration,
+  [
+    body('preferences').isObject(),
+    body('count').isInt({ min: 2, max: 5 })
+  ],
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const { preferences, count } = req.body;
+      const userId = req.user.id;
+
+      // Check idea generation limits
+      if (req.user.ideasGenerated + count > req.user.getIdeaLimit()) {
+        return res.status(403).json({
+          error: 'Not enough idea generation credits',
+          required: count,
+          remaining: req.user.getRemainingIdeas()
+        });
+      }
+
+      // Generate multiple ideas
+      const ideas = [];
+      for (let i = 0; i < count; i++) {
+        const idea = await aiService.generateBusinessIdea(preferences, userId);
+        
+        const savedIdea = new BusinessIdea({
+          userId,
+          ...idea
+        });
+        
+        await savedIdea.save();
+        ideas.push(savedIdea);
+      }
+
+      // Update user's idea count
+      req.user.ideasGenerated += count;
+      await req.user.save();
+
+      res.json({
+        success: true,
+        ideas,
+        count: ideas.length,
+        remainingIdeas: req.user.getRemainingIdeas()
+      });
+
+    } catch (error) {
+      console.error('Multiple idea generation error:', error);
+      res.status(500).json({ 
+        error: 'Failed to generate multiple business ideas',
+        message: error.message 
+      });
+    }
+  }
+);
+
+// Get user's business ideas
+router.get('/my-ideas',
+  authenticate,
+  async (req, res) => {
+    try {
+      const { page = 1, limit = 10, status, industry } = req.query;
+      const userId = req.user.id;
+
+      const query = { userId };
+      if (status) query.status = status;
+      if (industry) query.industry = industry;
+
+      const ideas = await BusinessIdea.find(query)
+        .sort({ createdAt: -1 })
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .exec();
+
+      const total = await BusinessIdea.countDocuments(query);
+
+      res.json({
+        ideas,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      });
+
+    } catch (error) {
+      console.error('Get user ideas error:', error);
+      res.status(500).json({ error: 'Failed to fetch business ideas' });
+    }
+  }
+);
+
+// Get specific business idea
+router.get('/:id',
+  authenticate,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      const idea = await BusinessIdea.findOne({ _id: id, userId });
+      
+      if (!idea) {
+        return res.status(404).json({ error: 'Business idea not found' });
+      }
+
+      // Increment view count
+      await idea.incrementViewCount();
+
+      res.json({ idea });
+
+    } catch (error) {
+      console.error('Get business idea error:', error);
+      res.status(500).json({ error: 'Failed to fetch business idea' });
+    }
+  }
+);
+
+// Save/bookmark business idea
+router.post('/:id/save',
+  authenticate,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      const idea = await BusinessIdea.findOne({ _id: id, userId });
+      
+      if (!idea) {
+        return res.status(404).json({ error: 'Business idea not found' });
+      }
+
+      await idea.saveIdea();
+      await req.user.saveIdea();
+
+      res.json({ 
+        message: 'Business idea saved successfully',
+        idea 
+      });
+
+    } catch (error) {
+      console.error('Save business idea error:', error);
+      res.status(500).json({ error: 'Failed to save business idea' });
+    }
+  }
+);
+
+// Generate business model canvas (Premium feature)
+router.post('/:id/canvas',
+  authenticate,
+  checkSubscription('premium'),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      const idea = await BusinessIdea.findOne({ _id: id, userId });
+      
+      if (!idea) {
+        return res.status(404).json({ error: 'Business idea not found' });
+      }
+
+      // Generate business model canvas using AI
+      const canvas = await aiService.generateBusinessCanvas(idea);
+
+      res.json({ 
+        success: true,
+        canvas,
+        ideaId: id
+      });
+
+    } catch (error) {
+      console.error('Generate canvas error:', error);
+      res.status(500).json({ 
+        error: 'Failed to generate business model canvas',
+        message: error.message
+      });
+    }
+  }
+);
+
+// Generate comprehensive business plan (Enterprise feature)
+router.post('/:id/business-plan',
+  authenticate,
+  checkSubscription('enterprise'),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      const idea = await BusinessIdea.findOne({ _id: id, userId });
+      
+      if (!idea) {
+        return res.status(404).json({ error: 'Business idea not found' });
+      }
+
+      // Generate comprehensive business plan using AI
+      const businessPlan = await aiService.generateBusinessPlan(idea, req.user);
+
+      res.json({ 
+        success: true,
+        businessPlan,
+        ideaId: id
+      });
+
+    } catch (error) {
+      console.error('Generate business plan error:', error);
+      res.status(500).json({ 
+        error: 'Failed to generate business plan',
+        message: error.message
+      });
+    }
+  }
+);
+
+// Compare multiple business ideas (Premium feature)
+router.post('/compare',
+  authenticate,
+  checkSubscription('premium'),
+  [
+    body('ideaIds').isArray({ min: 2, max: 5 }),
+    body('ideaIds.*').isMongoId()
+  ],
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const { ideaIds } = req.body;
+      const userId = req.user.id;
+
+      const ideas = await BusinessIdea.find({ 
+        _id: { $in: ideaIds }, 
+        userId 
+      });
+
+      if (ideas.length !== ideaIds.length) {
+        return res.status(404).json({ 
+          error: 'One or more business ideas not found' 
+        });
+      }
+
+      // Generate comparison analysis
+      const comparison = {
+        ideas: ideas.map(idea => ({
+          id: idea._id,
+          title: idea.title,
+          industry: idea.industry,
+          revenueEstimates: idea.revenueEstimates,
+          startupCost: idea.startupCost,
+          timeline: idea.timeline
+        })),
+        analysis: {
+          highestRevenue: ideas.reduce((max, idea) => 
+            idea.revenueEstimates.yearly > max.revenueEstimates.yearly ? idea : max
+          ),
+          lowestStartupCost: ideas.reduce((min, idea) => 
+            parseFloat(idea.startupCost.replace(/[^0-9]/g, '')) < 
+            parseFloat(min.startupCost.replace(/[^0-9]/g, '')) ? idea : min
+          ),
+          shortestTimeline: ideas.reduce((min, idea) => 
+            parseFloat(idea.timeline.replace(/[^0-9]/g, '')) < 
+            parseFloat(min.timeline.replace(/[^0-9]/g, '')) ? idea : min
+          )
+        },
+        recommendations: [
+          'Consider portfolio diversification across different industries',
+          'Evaluate risk-return ratios for each opportunity',
+          'Factor in your available time and expertise',
+          'Assess market timing and competitive landscape'
+        ]
+      };
+
+      res.json({ 
+        success: true,
+        comparison
+      });
+
+    } catch (error) {
+      console.error('Compare ideas error:', error);
+      res.status(500).json({ 
+        error: 'Failed to compare business ideas',
+        message: error.message
+      });
+    }
+  }
+);
+
+// Add notes to business idea
+router.put('/:id/notes',
+  authenticate,
+  [
+    body('notes').isString().isLength({ max: 2000 })
+  ],
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { notes } = req.body;
+      const userId = req.user.id;
+
+      const idea = await BusinessIdea.findOneAndUpdate(
+        { _id: id, userId },
+        { notes },
+        { new: true }
+      );
+      
+      if (!idea) {
+        return res.status(404).json({ error: 'Business idea not found' });
+      }
+
+      res.json({ 
+        message: 'Notes updated successfully',
+        idea 
+      });
+
+    } catch (error) {
+      console.error('Update notes error:', error);
+      res.status(500).json({ error: 'Failed to update notes' });
+    }
+  }
+);
+
+// Rate business idea
+router.put('/:id/rating',
+  authenticate,
+  [
+    body('rating').isInt({ min: 1, max: 5 }),
+    body('feedback').optional().isString().isLength({ max: 1000 })
+  ],
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { rating, feedback } = req.body;
+      const userId = req.user.id;
+
+      const idea = await BusinessIdea.findOneAndUpdate(
+        { _id: id, userId },
+        { rating, feedback },
+        { new: true }
+      );
+      
+      if (!idea) {
+        return res.status(404).json({ error: 'Business idea not found' });
+      }
+
+      res.json({ 
+        message: 'Rating updated successfully',
+        idea 
+      });
+
+    } catch (error) {
+      console.error('Update rating error:', error);
+      res.status(500).json({ error: 'Failed to update rating' });
+    }
+  }
+);
+
+// Delete business idea
+router.delete('/:id',
+  authenticate,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      const idea = await BusinessIdea.findOneAndDelete({ _id: id, userId });
+      
+      if (!idea) {
+        return res.status(404).json({ error: 'Business idea not found' });
+      }
+
+      res.json({ message: 'Business idea deleted successfully' });
+
+    } catch (error) {
+      console.error('Delete business idea error:', error);
+      res.status(500).json({ error: 'Failed to delete business idea' });
+    }
+  }
+);
+
+// Get public business ideas (for inspiration)
+router.get('/public/featured',
+  async (req, res) => {
+    try {
+      const { limit = 10 } = req.query;
+
+      const ideas = await BusinessIdea.findPublic()
+        .limit(parseInt(limit))
+        .sort({ shareCount: -1, createdAt: -1 });
+
+      res.json({ 
+        ideas: ideas.map(idea => ({
+          id: idea._id,
+          title: idea.title,
+          description: idea.description,
+          industry: idea.industry,
+          targetMarket: idea.targetMarket,
+          author: idea.userId.displayName,
+          shareCount: idea.shareCount,
+          rating: idea.rating
+        }))
+      });
+
+    } catch (error) {
+      console.error('Get public ideas error:', error);
+      res.status(500).json({ error: 'Failed to fetch public business ideas' });
+    }
+  }
+);
+
+module.exports = router;
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');

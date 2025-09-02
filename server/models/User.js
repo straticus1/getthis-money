@@ -193,12 +193,99 @@ userSchema.methods.incrementLoginCount = function() {
 userSchema.methods.canGenerateIdeas = function() {
   const limits = {
     free: 5,
-    premium: 50,
+    premium: 100,
     enterprise: -1 // unlimited
   };
   
   const limit = limits[this.subscription];
   return limit === -1 || this.ideasGenerated < limit;
+};
+
+// Method to get idea generation limit
+userSchema.methods.getIdeaLimit = function() {
+  const limits = {
+    free: 5,
+    premium: 100,
+    enterprise: -1
+  };
+  return limits[this.subscription] || limits.free;
+};
+
+// Method to get remaining ideas
+userSchema.methods.getRemainingIdeas = function() {
+  const limit = this.getIdeaLimit();
+  if (limit === -1) return 'unlimited';
+  return Math.max(0, limit - this.ideasGenerated);
+};
+
+// Method to check subscription status
+userSchema.methods.hasActiveSubscription = function() {
+  if (this.subscription === 'free') return true;
+  if (!this.subscriptionExpires) return false;
+  return new Date() < this.subscriptionExpires;
+};
+
+// Method to get subscription features
+userSchema.methods.getSubscriptionFeatures = function() {
+  const features = {
+    free: {
+      ideasPerMonth: 5,
+      aiGeneration: true,
+      basicTemplates: true,
+      ideaComparison: false,
+      businessCanvas: false,
+      businessPlan: false,
+      prioritySupport: false,
+      exportPDF: false,
+      teamCollaboration: false,
+      whiteLabel: false
+    },
+    premium: {
+      ideasPerMonth: 100,
+      aiGeneration: true,
+      basicTemplates: true,
+      ideaComparison: true,
+      businessCanvas: true,
+      businessPlan: false,
+      prioritySupport: true,
+      exportPDF: true,
+      teamCollaboration: true,
+      whiteLabel: false
+    },
+    enterprise: {
+      ideasPerMonth: -1,
+      aiGeneration: true,
+      basicTemplates: true,
+      ideaComparison: true,
+      businessCanvas: true,
+      businessPlan: true,
+      prioritySupport: true,
+      exportPDF: true,
+      teamCollaboration: true,
+      whiteLabel: true
+    }
+  };
+  
+  return features[this.subscription] || features.free;
+};
+
+// Method to check if user has feature access
+userSchema.methods.hasFeatureAccess = function(feature) {
+  const features = this.getSubscriptionFeatures();
+  return features[feature] === true;
+};
+
+// Method to get analytics data
+userSchema.methods.getAnalytics = function() {
+  return {
+    ideasGenerated: this.ideasGenerated,
+    ideasSaved: this.ideasSaved,
+    loginCount: this.loginCount,
+    lastLogin: this.lastLogin,
+    accountAge: Math.floor((Date.now() - this.createdAt) / (1000 * 60 * 60 * 24)),
+    subscription: this.subscription,
+    subscriptionExpires: this.subscriptionExpires
+  };
 };
 
 // Method to increment ideas generated

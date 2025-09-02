@@ -1,40 +1,22 @@
 const express = require('express');
 const passport = require('passport');
-const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
+const {
+  JWTService,
+  validationSchemas,
+  handleValidationErrors,
+  rateLimits
+} = require('../middleware/security');
 const router = express.Router();
 
-// JWT token generation
-const generateToken = (user) => {
-  return jwt.sign(
-    { 
-      id: user._id, 
-      email: user.email,
-      subscription: user.subscription 
-    },
-    process.env.JWT_SECRET || 'your-jwt-secret',
-    { expiresIn: '7d' }
-  );
-};
+// Initialize JWT service
+const jwtService = new JWTService();
 
-// Validation middleware with XSS protection
-const validateRegistration = [
-  body('email').isEmail().normalizeEmail().escape(),
-  body('password').isLength({ min: 6, max: 128 }).escape(),
-  body('firstName').trim().isLength({ min: 1, max: 50 }).escape(),
-  body('lastName').trim().isLength({ min: 1, max: 50 }).escape(),
-  body('username').optional().trim().isLength({ min: 3, max: 30 }).escape()
-];
+// Use validation schemas from security middleware
 
-const validateLogin = [
-  body('email').isEmail().normalizeEmail(),
-  body('password').notEmpty()
-];
-
-// Register new user
-router.post('/register', validateRegistration, async (req, res) => {
+// Register new user with rate limiting
+router.post('/register', rateLimits.auth, validationSchemas.registration, handleValidationErrors, async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -68,12 +50,17 @@ router.post('/register', validateRegistration, async (req, res) => {
 
     await user.save();
 
-    // Generate token
-    const token = generateToken(user);
+    // Generate secure tokens
+    const tokens = jwtService.generateTokens({
+      id: user._id,
+      email: user.email,
+      subscription: user.subscription
+    });
 
     res.status(201).json({
       message: 'User registered successfully',
-      token,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       user: user.toJSON()
     });
   } catch (error) {

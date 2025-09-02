@@ -1,0 +1,52 @@
+{
+  "name": "getthis-money-roblox",
+  "version": "1.0.0",
+  "description": "Roblox integration for GetThis.Money - AI Business Idea Generator",
+  "main": "src/server/main.lua",
+  "scripts": {
+    "test": "lua tests/run-tests.lua",
+    "build": "lua build/build.lua",
+    "deploy": "lua deploy/deploy.lua",
+    "lint": "lua lint/lint.lua",
+    "docs": "lua docs/generate.lua"
+  },
+  "keywords": [
+    "roblox",
+    "business",
+    "ai",
+    "entrepreneurship",
+    "education",
+    "gaming",
+    "marketplace",
+    "robux"
+  ],
+  "author": "Ryan Coleman <coleman.ryan@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "http": "^0.0.1-security",
+    "json": "^0.0.1",
+    "crypto": "^0.0.1"
+  },
+  "devDependencies": {
+    "lua-test": "^1.0.0",
+    "lua-lint": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "lua": ">=5.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/getthis.money.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/getthis.money/issues"
+  },
+  "homepage": "https://getthis.money/roblox",
+  "config": {
+    "apiUrl": "http://localhost:5000/api",
+    "robloxApiUrl": "https://apis.roblox.com",
+    "maxRequestsPerMinute": 60,
+    "sessionTimeout": 3600
+  }
+}

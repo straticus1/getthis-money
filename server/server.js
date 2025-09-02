@@ -10,6 +10,9 @@ require('dotenv').config();
 // Import passport configuration to prevent memory leaks
 require('./config/passport');
 
+// Import subscription scheduler
+const subscriptionScheduler = require('./utils/scheduler');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -25,6 +28,7 @@ app.use((req, res, next) => {
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const businessIdeaRoutes = require('./routes/businessIdeas');
+const subscriptionRoutes = require('./routes/subscription');
 
 // Security middleware with CSP
 app.use(helmet({
@@ -119,7 +123,14 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/getthis-m
   bufferMaxEntries: 0, // Disable mongoose buffering
   bufferCommands: false, // Disable mongoose buffering
 })
-.then(() => console.log('Connected to MongoDB'))
+.then(() => {
+  console.log('Connected to MongoDB');
+  
+  // Start subscription scheduler after database connection
+  if (process.env.NODE_ENV !== 'test') {
+    subscriptionScheduler.start();
+  }
+})
 .catch(err => {
   console.error('MongoDB connection error:', err);
   process.exit(1); // Exit if database connection fails
@@ -136,6 +147,12 @@ mongoose.connection.on('disconnected', () => {
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
+  console.log('Received SIGINT. Shutting down gracefully...');
+  
+  // Stop subscription scheduler
+  subscriptionScheduler.stop();
+  
+  // Close database connection
   await mongoose.connection.close();
   console.log('MongoDB connection closed through app termination');
   process.exit(0);
@@ -145,6 +162,7 @@ process.on('SIGINT', async () => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/business-ideas', businessIdeaRoutes);
+app.use('/api/subscription', subscriptionRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
