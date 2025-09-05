@@ -1,28 +1,43 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from './components/auth/AuthContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import LoginForm from './components/auth/LoginForm';
+import LoadingSpinner from './components/common/LoadingSpinner';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import Header from './components/Header';
+
+// Import existing components
 import PreferenceForm from './components/PreferenceForm';
 import BusinessIdeaCard from './components/BusinessIdeaCard';
 import { UserPreferences, BusinessIdea } from './types';
-import { generateBusinessIdea } from './services/aiGenerator';
+import { BusinessIdeasService } from './services/api';
 import { Sparkles, ArrowLeft } from 'lucide-react';
 
-function App() {
-  const [currentStep, setCurrentStep] = useState<'form' | 'result'>('form');
-  const [isLoading, setIsLoading] = useState(false);
-  const [businessIdea, setBusinessIdea] = useState<BusinessIdea | null>(null);
-  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
+// Legacy Home Component (keeping the original functionality)
+const LegacyHome: React.FC = () => {
+  const [currentStep, setCurrentStep] = React.useState<'form' | 'result'>('form');
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [businessIdea, setBusinessIdea] = React.useState<BusinessIdea | null>(null);
+  const [userPreferences, setUserPreferences] = React.useState<UserPreferences | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
 
   const handleGenerateIdea = async (preferences: UserPreferences) => {
     setIsLoading(true);
+    setError(null);
     setUserPreferences(preferences);
     
-    // Simulate AI processing time
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const idea = generateBusinessIdea(preferences);
-    setBusinessIdea(idea);
-    setCurrentStep('result');
-    setIsLoading(false);
+    try {
+      const idea = await BusinessIdeasService.generateIdea(preferences);
+      setBusinessIdea(idea);
+      setCurrentStep('result');
+    } catch (error: any) {
+      console.error('Failed to generate idea:', error);
+      setError(error.response?.data?.message || 'Failed to generate business idea. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGenerateAnother = () => {
@@ -34,13 +49,24 @@ function App() {
   const handleBackToForm = () => {
     setCurrentStep('form');
     setBusinessIdea(null);
+    setError(null);
   };
+
+  if (isLoading) {
+    return <LoadingSpinner fullScreen message="Generating your personalized business idea..." />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       <Header />
       
       <main className="container mx-auto px-4 py-8">
+        {error && (
+          <div className="mb-6 bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-red-200 text-center">
+            {error}
+          </div>
+        )}
+        
         {currentStep === 'form' && (
           <div className="animate-fade-in">
             <div className="text-center mb-8">
@@ -128,6 +154,81 @@ function App() {
         </div>
       </footer>
     </div>
+  );
+};
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <div className="App">
+            <Routes>
+            {/* Public Routes */}
+            <Route
+              path="/"
+              element={<LegacyHome />}
+            />
+            <Route
+              path="/login"
+              element={
+                <ProtectedRoute requireAuth={false}>
+                  <LoginForm />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <ProtectedRoute requireAuth={false}>
+                  <div>Register form will go here</div>
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Protected Routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <div>Dashboard will go here</div>
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Redirect unknown routes to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+          
+          {/* Global Toast Notifications */}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: 'white',
+              },
+              success: {
+                iconTheme: {
+                  primary: '#10B981',
+                  secondary: 'white',
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: '#EF4444',
+                  secondary: 'white',
+                },
+              },
+            }}
+          />
+          </div>
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
