@@ -11,6 +11,18 @@ export interface BusinessIdea {
   state: string;
   taxImplications: string;
   aiSuggestions: string[];
+  
+  // Enhanced AI fields
+  competitiveAdvantage?: string;
+  marketOpportunity?: string;
+  keyActivities?: string[];
+  keyResources?: string[];
+  keyPartners?: string[];
+  challenges?: string[];
+  scalability?: string;
+  isAIGenerated?: boolean;
+  generatedAt?: string;
+  userPreferences?: UserPreferences;
 }
 
 export interface RevenueEstimates {

@@ -4,45 +4,43 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './components/auth/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoginForm from './components/auth/LoginForm';
-import LoadingSpinner from './components/common/LoadingSpinner';
+import RegisterForm from './components/auth/RegisterForm';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import Header from './components/Header';
 
 // Import existing components
 import PreferenceForm from './components/PreferenceForm';
 import BusinessIdeaCard from './components/BusinessIdeaCard';
+import AIGenerationProgress from './components/generation/AIGenerationProgress';
 import { UserPreferences, BusinessIdea } from './types';
-import { BusinessIdeasService } from './services/api';
 import { Sparkles, ArrowLeft } from 'lucide-react';
 
 // Legacy Home Component (keeping the original functionality)
 const LegacyHome: React.FC = () => {
-  const [currentStep, setCurrentStep] = React.useState<'form' | 'result'>('form');
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [currentStep, setCurrentStep] = React.useState<'form' | 'generating' | 'result'>('form');
   const [businessIdea, setBusinessIdea] = React.useState<BusinessIdea | null>(null);
   const [userPreferences, setUserPreferences] = React.useState<UserPreferences | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   const handleGenerateIdea = async (preferences: UserPreferences) => {
-    setIsLoading(true);
     setError(null);
     setUserPreferences(preferences);
-    
-    try {
-      const idea = await BusinessIdeasService.generateIdea(preferences);
-      setBusinessIdea(idea);
-      setCurrentStep('result');
-    } catch (error: any) {
-      console.error('Failed to generate idea:', error);
-      setError(error.response?.data?.message || 'Failed to generate business idea. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    setCurrentStep('generating');
+  };
+
+  const handleGenerationComplete = (idea: BusinessIdea) => {
+    setBusinessIdea(idea);
+    setCurrentStep('result');
+  };
+
+  const handleGenerationError = (errorMessage: string) => {
+    setError(errorMessage);
+    setCurrentStep('form');
   };
 
   const handleGenerateAnother = () => {
     if (userPreferences) {
-      handleGenerateIdea(userPreferences);
+      setCurrentStep('generating');
     }
   };
 
@@ -52,9 +50,6 @@ const LegacyHome: React.FC = () => {
     setError(null);
   };
 
-  if (isLoading) {
-    return <LoadingSpinner fullScreen message="Generating your personalized business idea..." />;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
@@ -85,7 +80,7 @@ const LegacyHome: React.FC = () => {
               </p>
             </div>
             
-            <PreferenceForm onSubmit={handleGenerateIdea} isLoading={isLoading} />
+            <PreferenceForm onSubmit={handleGenerateIdea} isLoading={false} />
             
             {/* Features Section */}
             <div className="mt-16 grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
@@ -114,6 +109,14 @@ const LegacyHome: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {currentStep === 'generating' && userPreferences && (
+          <AIGenerationProgress
+            preferences={userPreferences}
+            onComplete={handleGenerationComplete}
+            onError={handleGenerationError}
+          />
         )}
 
         {currentStep === 'result' && businessIdea && (
@@ -181,7 +184,7 @@ function App() {
               path="/register"
               element={
                 <ProtectedRoute requireAuth={false}>
-                  <div>Register form will go here</div>
+                  <RegisterForm />
                 </ProtectedRoute>
               }
             />
