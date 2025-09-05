@@ -30,19 +30,47 @@ GetThis.Money is a cutting-edge web application that uses artificial intelligenc
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: React 18 with TypeScript
+### Frontend
+- **Framework**: React 18 with TypeScript
 - **Styling**: Tailwind CSS with custom glass morphism effects
 - **Icons**: Lucide React for beautiful, consistent icons
 - **Build Tool**: Create React App
 - **State Management**: React Hooks
+- **Routing**: React Router v6
+- **HTTP Client**: Axios
+- **Authentication**: JWT with OAuth2 (Google, GitHub, Facebook)
+
+### Backend
+- **Runtime**: Node.js 18+
+- **Framework**: Express.js
+- **Database**: MongoDB (DocumentDB in AWS)
+- **Authentication**: Passport.js with JWT
+- **File Upload**: Multer
+- **Email**: Nodemailer
+- **Payment**: Stripe integration
+- **Validation**: Joi
+
+### Infrastructure (AWS)
+- **Compute**: ECS Fargate
+- **Database**: Amazon DocumentDB
+- **Storage**: S3 + CloudFront CDN
+- **Load Balancer**: Application Load Balancer
+- **DNS**: Route53
+- **SSL/TLS**: AWS Certificate Manager
+- **Container Registry**: Amazon ECR
+- **Secrets Management**: AWS Systems Manager Parameter Store
+- **Infrastructure as Code**: Terraform
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Local Development
+
+#### Prerequisites
 - Node.js (version 16 or higher)
 - npm or yarn package manager
+- MongoDB (local installation)
 
-### Installation
+#### Installation
 
 1. **Clone the repository**
    ```bash
@@ -50,24 +78,77 @@ GetThis.Money is a cutting-edge web application that uses artificial intelligenc
    cd getthis.money
    ```
 
-2. **Install dependencies**
+2. **Install frontend dependencies**
    ```bash
-   npm install
+   npm install --legacy-peer-deps
    ```
 
-3. **Start the development server**
+3. **Install backend dependencies**
    ```bash
+   cd server
+   npm install
+   cd ..
+   ```
+
+4. **Set up environment variables**
+   ```bash
+   # Frontend
+   cp .env.example .env
+   
+   # Backend
+   cd server
+   cp .env.example .env
+   # Edit the .env file with your configuration
+   cd ..
+   ```
+
+5. **Start MongoDB**
+   ```bash
+   # macOS with Homebrew
+   brew services start mongodb-community
+   
+   # Or start manually
+   mongod --config /opt/homebrew/etc/mongod.conf
+   ```
+
+6. **Start the backend server**
+   ```bash
+   cd server
+   npm run dev
+   ```
+
+7. **Start the frontend development server**
+   ```bash
+   # In a new terminal
    npm start
    ```
 
-4. **Open your browser**
-   Navigate to `http://localhost:3000` to see the application
+8. **Open your browser**
+   - Frontend: `http://localhost:3000`
+   - Backend API: `http://localhost:5000`
 
-### Building for Production
+### AWS Production Deployment
 
-```bash
-npm run build
-```
+For production deployment to AWS, see the comprehensive [AWS Deployment Guide](AWS_DEPLOYMENT.md).
+
+#### Quick Production Deploy
+
+1. **Set up AWS infrastructure:**
+   ```bash
+   ./scripts/setup-infrastructure.sh
+   ```
+
+2. **Deploy backend:**
+   ```bash
+   ./scripts/deploy-backend.sh
+   ```
+
+3. **Deploy frontend:**
+   ```bash
+   ./scripts/deploy-frontend.sh
+   ```
+
+**Note**: You'll need AWS CLI, Terraform, and Docker installed for production deployment.
 
 ## 📊 How It Works
 
@@ -100,22 +181,44 @@ Advanced algorithms calculate:
 - **Tax Adjustments**: State-specific modifications
 - **Experience Multipliers**: Adjusted for user expertise
 
-## 🏗️ Project Structure
+## 🏧 Project Structure
 
 ```
-src/
-├── components/          # React components
-│   ├── Header.tsx      # Application header
-│   ├── PreferenceForm.tsx  # User input form
-│   └── BusinessIdeaCard.tsx # Results display
-├── data/               # Static data
-│   ├── states.ts       # US states and tax data
-│   └── industries.ts   # Industry information
-├── services/           # Business logic
-│   └── aiGenerator.ts  # AI idea generation
-├── types.ts           # TypeScript definitions
-├── App.tsx            # Main application component
-└── index.tsx          # Application entry point
+getthis.money/
+├── src/                    # React frontend source
+│   ├── components/         # React components
+│   ├── data/              # Static data (states, industries)
+│   ├── services/          # API services
+│   ├── types.ts           # TypeScript definitions
+│   ├── App.tsx            # Main application component
+│   └── index.tsx          # Application entry point
+├── server/                 # Node.js backend
+│   ├── routes/            # API routes
+│   ├── models/            # Database models
+│   ├── middleware/        # Express middleware
+│   ├── controllers/       # Route controllers
+│   ├── services/          # Business logic
+│   └── server.js          # Main server file
+├── terraform/              # Infrastructure as Code
+│   ├── modules/           # Terraform modules
+│   │   ├── vpc/           # VPC and networking
+│   │   ├── ecs/           # ECS Fargate cluster
+│   │   ├── documentdb/    # DocumentDB cluster
+│   │   ├── s3-cloudfront/ # Frontend hosting
+│   │   ├── alb/           # Load balancer
+│   │   ├── route53/       # DNS management
+│   │   ├── ecr/           # Container registry
+│   │   └── iam/           # IAM roles
+│   ├── main.tf            # Main Terraform config
+│   ├── variables.tf       # Input variables
+│   └── outputs.tf         # Output values
+├── scripts/                # Deployment scripts
+│   ├── setup-infrastructure.sh
+│   ├── deploy-backend.sh
+│   └── deploy-frontend.sh
+├── Dockerfile             # Backend containerization
+├── AWS_DEPLOYMENT.md      # AWS deployment guide
+└── README.md              # This file
 ```
 
 ## 🎨 Design Features
@@ -164,6 +267,56 @@ Base Revenue × State Multiplier × Budget Multiplier × Experience Multiplier =
 2. Adjust multipliers and factors as needed
 3. Test with different user preferences
 
+## 🌍 Infrastructure Architecture
+
+### AWS Production Environment
+
+The application is deployed on AWS using a modern, scalable architecture:
+
+- **Frontend**: React SPA hosted on S3 with CloudFront CDN
+- **Backend**: Containerized Node.js API running on ECS Fargate
+- **Database**: Amazon DocumentDB (MongoDB-compatible)
+- **Load Balancer**: Application Load Balancer with SSL termination
+- **DNS**: Route53 with custom domain management
+- **Security**: VPC isolation, encrypted storage, secrets management
+- **Monitoring**: CloudWatch logs and metrics
+- **Scaling**: Auto-scaling based on CPU/memory utilization
+
+### Infrastructure as Code
+
+All infrastructure is defined using Terraform with:
+- Modular architecture for reusability
+- State management in S3 with DynamoDB locking
+- Environment-specific configurations
+- Automated SSL certificate management
+- Security best practices
+
+### Deployment Pipeline
+
+1. **Infrastructure**: Terraform deploys AWS resources
+2. **Backend**: Docker images built and pushed to ECR
+3. **Frontend**: React builds uploaded to S3 with CloudFront invalidation
+4. **Secrets**: OAuth keys and JWT secrets stored in AWS Parameter Store
+
+## 🚀 Deployment Options
+
+### Local Development
+Suitable for development and testing:
+```bash
+npm start           # Frontend on localhost:3000
+cd server && npm run dev  # Backend on localhost:5000
+```
+
+### AWS Production
+Enterprise-ready deployment with:
+- High availability across multiple AZs
+- Auto-scaling and load balancing
+- SSL certificates and custom domain
+- Database backups and monitoring
+- Cost optimization (~$140-220/month)
+
+See [AWS_DEPLOYMENT.md](AWS_DEPLOYMENT.md) for complete deployment instructions.
+
 ## 🤝 Contributing
 
 We welcome contributions! Please follow these steps:
@@ -173,6 +326,14 @@ We welcome contributions! Please follow these steps:
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+### Development Guidelines
+
+- Follow TypeScript best practices
+- Write tests for new features
+- Update documentation for infrastructure changes
+- Use conventional commit messages
+- Test both local and AWS deployment paths
 
 ## 📝 License
 
@@ -192,19 +353,33 @@ If you have any questions or need support:
 
 ## 🎯 Roadmap
 
+### ✅ Recently Completed
+- [x] **AWS Production Deployment**: Complete infrastructure with Terraform
+- [x] **Docker Containerization**: Production-ready containerization
+- [x] **SSL/HTTPS**: Automated certificate management
+- [x] **Custom Domain**: Route53 DNS with getthis.money
+- [x] **Auto-Scaling**: ECS Fargate with CPU/memory-based scaling
+- [x] **Database**: DocumentDB cluster with backups
+- [x] **CDN**: CloudFront for global content delivery
+- [x] **Monitoring**: CloudWatch logs and metrics
+
 ### Upcoming Features
+- [ ] **CI/CD Pipeline**: GitHub Actions for automated deployments
 - [ ] **Multiple Idea Comparison**: Compare different business ideas side-by-side
 - [ ] **Export Functionality**: Save ideas as PDF or share via email
 - [ ] **Market Research Integration**: Real-time market data analysis
 - [ ] **Competitor Analysis**: AI-powered competitive landscape insights
 - [ ] **Funding Recommendations**: Investment and funding suggestions
 - [ ] **Mobile App**: Native iOS and Android applications
+- [ ] **Performance Monitoring**: New Relic or DataDog integration
 
 ### Future Enhancements
 - [ ] **Machine Learning**: Improved AI algorithms with user feedback
 - [ ] **International Markets**: Support for global business opportunities
 - [ ] **Industry Partnerships**: Integration with business service providers
 - [ ] **Community Features**: User idea sharing and collaboration
+- [ ] **Multi-Environment**: Staging and development AWS environments
+- [ ] **Blue/Green Deployments**: Zero-downtime deployment strategy
 
 ---
 

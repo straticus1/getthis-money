@@ -1,0 +1,17 @@
+# AWS Configuration
+aws_region = "us-east-1"
+environment = "prod"
+
+# Project Configuration
+project_name = "getthis-money"
+domain_name = "getthis.money"
+
+# Network Configuration
+vpc_cidr = "10.0.0.0/16"
+
+# DocumentDB Configuration
+documentdb_master_username = "getthismoney"
+# documentdb_master_password will be set via environment variable or prompt
+
+# Optional: SSL Certificate ARN (if you already have one)
+# ssl_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"

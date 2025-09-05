@@ -1,9 +1,83 @@
 # Changelog
 
-All notable changes to the GetThis.Money project will be documented in this file.
+All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.1.0] - 2025-01-05
+
+### Added - AWS Production Infrastructure
+
+#### Infrastructure as Code (Terraform)
+- **Complete AWS architecture** with modular Terraform configuration
+- **Route53 DNS management** with authoritative name servers for custom domain
+- **VPC networking** with public/private subnets across multiple AZs
+- **Application Load Balancer** with SSL/TLS termination and HTTPS redirects
+- **ECS Fargate cluster** for containerized backend with auto-scaling
+- **Amazon DocumentDB** cluster for MongoDB-compatible database
+- **S3 + CloudFront** for global frontend hosting with CDN
+- **ECR repository** for Docker image management
+- **IAM roles and policies** with least-privilege security
+- **CloudWatch logging** and monitoring for all services
+- **VPC endpoints** for cost optimization (S3, DynamoDB)
+
+#### Containerization
+- **Production Dockerfile** with multi-stage builds and security hardening
+- **Health checks** for container monitoring
+- **Non-root user** execution for security
+- **Optimized image size** with Alpine Linux base
+
+#### Deployment Automation
+- **Infrastructure setup script** (`setup-infrastructure.sh`) for complete AWS deployment
+- **Backend deployment script** (`deploy-backend.sh`) for Docker builds and ECS updates
+- **Frontend deployment script** (`deploy-frontend.sh`) for S3 uploads and CloudFront invalidation
+- **Automated SSL certificate** provisioning and validation
+- **Secrets management** via AWS Systems Manager Parameter Store
+
+#### Security Enhancements
+- **VPC isolation** with private subnets for backend services
+- **Security groups** with minimal required access
+- **Encrypted storage** for S3, DocumentDB, and ECS
+- **HTTPS-only** traffic with automatic HTTP redirects
+- **Container security** with read-only root filesystem options
+
+#### Monitoring & Operations
+- **CloudWatch log groups** for application and infrastructure logs
+- **ECS service health monitoring** with automatic recovery
+- **Route53 health checks** for domain monitoring
+- **DocumentDB performance insights** for database monitoring
+- **Auto-scaling policies** based on CPU and memory utilization
+
+#### Documentation
+- **Comprehensive AWS Deployment Guide** (`AWS_DEPLOYMENT.md`)
+- **Architecture diagrams** and cost estimates
+- **Troubleshooting guide** with common issues and solutions
+- **Maintenance procedures** for updates and rollbacks
+- **Security configuration** instructions for OAuth and secrets
+
+### Changed
+- **Project structure** updated to include Terraform modules and deployment scripts
+- **README.md** enhanced with AWS deployment instructions and architecture overview
+- **Development workflow** now supports both local and production AWS environments
+
+### Infrastructure Specifications
+- **Estimated monthly cost**: $140-220 USD
+- **High availability**: Multi-AZ deployment
+- **Auto-scaling**: 1-10 ECS tasks based on demand
+- **Database**: 2x t3.medium DocumentDB instances with 7-day backups
+- **CDN**: Global CloudFront distribution with custom domain
+- **SSL/TLS**: Automated certificate management via ACM
+- **Monitoring**: Complete observability with CloudWatch
+
+### Technical Details
+- **Terraform**: Infrastructure as Code with modular architecture
+- **Docker**: Production-optimized containerization
+- **AWS ECS Fargate**: Serverless container orchestration
+- **Amazon DocumentDB**: Fully managed MongoDB-compatible database
+- **Route53**: Authoritative DNS with health checks
+- **CloudFront**: Global CDN with origin access control
+- **Application Load Balancer**: Layer 7 load balancing with SSL termination
 
 ## [1.1.0] - 2024-09-05
 

@@ -471,28 +471,84 @@ DATA SECURITY
 8. DEPLOYMENT GUIDE
 ===================
 
-DEVELOPMENT
------------
-1. Install dependencies
-2. Set up MongoDB
+LOCAL DEVELOPMENT
+-----------------
+1. Install dependencies (frontend and backend)
+2. Set up MongoDB locally
 3. Configure environment variables
-4. Start backend: npm run dev
-5. Start frontend: npm start
+4. Start backend: npm run dev (server directory)
+5. Start frontend: npm start (root directory)
+6. Access at http://localhost:3000
 
-PRODUCTION
-----------
-1. Build frontend: npm run build
-2. Set production environment variables
-3. Use PM2 for process management
-4. Configure reverse proxy (nginx)
-5. Set up SSL certificates
-6. Configure MongoDB authentication
+AWS PRODUCTION DEPLOYMENT
+-------------------------
+1. Prerequisites:
+   - AWS CLI configured
+   - Terraform installed
+   - Docker installed
+   - Domain ownership (getthis.money)
+
+2. Infrastructure Setup:
+   - Run: ./scripts/setup-infrastructure.sh
+   - Configure DocumentDB password in terraform.tfvars
+   - Apply Terraform configuration
+   - Update domain registrar with Route53 name servers
+
+3. Application Secrets:
+   - Store OAuth credentials in AWS Parameter Store
+   - Configure JWT secrets
+   - Set up API keys (OpenAI, Stripe, etc.)
+
+4. Backend Deployment:
+   - Run: ./scripts/deploy-backend.sh
+   - Builds Docker image
+   - Pushes to ECR
+   - Updates ECS service
+
+5. Frontend Deployment:
+   - Run: ./scripts/deploy-frontend.sh
+   - Builds React application
+   - Uploads to S3
+   - Invalidates CloudFront cache
+
+AWS ARCHITECTURE
+----------------
+- Route53: DNS management with health checks
+- CloudFront: Global CDN for React frontend
+- S3: Static website hosting
+- ALB: Load balancer with SSL termination
+- ECS Fargate: Containerized backend with auto-scaling
+- DocumentDB: MongoDB-compatible database cluster
+- ECR: Docker image registry
+- VPC: Isolated network environment
+- IAM: Security roles and policies
+- CloudWatch: Logging and monitoring
+
+INFRASTRUCTURE AS CODE
+---------------------
+- Terraform modules for all AWS resources
+- State management in S3 with DynamoDB locking
+- Modular architecture for reusability
+- Environment-specific configurations
+- Automated SSL certificate management
 
 DOCKER DEPLOYMENT
 -----------------
-1. Create Dockerfile
-2. Build image: docker build -t getthis-money .
-3. Run container: docker run -p 5000:5000 --env-file .env getthis-money
+1. Dockerfile optimized for production
+2. Multi-stage builds for smaller images
+3. Security hardening with non-root user
+4. Health checks for container monitoring
+5. Build: docker build -t getthis-money .
+6. Run: docker run -p 5000:5000 --env-file .env getthis-money
+
+MONITORING & LOGGING
+-------------------
+- CloudWatch log groups for all services
+- ECS service health monitoring
+- DocumentDB performance insights
+- Route53 health checks
+- Auto-scaling based on CPU/memory metrics
+- Cost optimization with VPC endpoints
 
 9. TROUBLESHOOTING
 ==================
