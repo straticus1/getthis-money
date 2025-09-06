@@ -6,6 +6,21 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Theme-aware colors using CSS custom properties
+        'theme-primary': 'var(--color-primary)',
+        'theme-secondary': 'var(--color-secondary)',
+        'theme-accent': 'var(--color-accent)',
+        'theme-success': 'var(--color-success)',
+        'theme-warning': 'var(--color-warning)',
+        'theme-error': 'var(--color-error)',
+        'theme-info': 'var(--color-info)',
+        
+        // Theme-aware text colors
+        'theme-primary-text': 'var(--color-text-primary)',
+        'theme-secondary-text': 'var(--color-text-secondary)',
+        'theme-muted-text': 'var(--color-text-muted)',
+        
+        // Legacy colors for backward compatibility
         primary: {
           50: '#f0f9ff',
           100: '#e0f2fe',
@@ -30,6 +45,11 @@ module.exports = {
           800: '#166534',
           900: '#14532d',
         }
+      },
+      backgroundImage: {
+        'gradient-theme': 'var(--gradient-bg)',
+        'gradient-card': 'var(--gradient-card)',
+        'gradient-accent': 'var(--gradient-accent)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

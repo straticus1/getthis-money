@@ -3,6 +3,7 @@ import { DollarSign, Zap, User, LogOut, Settings } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
 import Logo from './Logo';
+import ThemeSwitcher from './ThemeSwitcher';
 
 const Header: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -33,9 +34,15 @@ const Header: React.FC = () => {
         <div className="hidden md:flex items-center space-x-6">
           {!isAuthenticated ? (
             <>
-              <span className="text-sm text-gray-300">Generate • Estimate • Succeed</span>
               <div className="flex items-center space-x-4">
                 <Link 
+                  to="/themes"
+                  className="text-sm text-gray-300 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/10"
+                >
+                  Themes
+                </Link>
+                <ThemeSwitcher variant="header" />
+                <Link
                   to="/login"
                   className="text-gray-300 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-white/10"
                 >
@@ -43,7 +50,7 @@ const Header: React.FC = () => {
                 </Link>
                 <Link 
                   to="/register"
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 px-4 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
+                  className="bg-gradient-card text-white py-2 px-4 rounded-lg font-semibold hover:opacity-90 transition-all duration-200 transform hover:scale-105"
                 >
                   Get Started
                 </Link>
@@ -51,6 +58,7 @@ const Header: React.FC = () => {
             </>
           ) : (
             <>
+              <ThemeSwitcher variant="header" />
               <Link 
                 to="/dashboard"
                 className="text-gray-300 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/10"

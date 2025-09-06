@@ -7,6 +7,8 @@ import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import Header from './components/Header';
+import ThemeSwitcher from './components/ThemeSwitcher';
+import ThemeDemo from './components/ThemeDemo';
 
 // Import existing components
 import PreferenceForm from './components/PreferenceForm';
@@ -52,7 +54,7 @@ const LegacyHome: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+    <div className="min-h-screen bg-gradient-theme">
       <Header />
       
       <main className="container mx-auto px-4 py-8">
@@ -66,9 +68,9 @@ const LegacyHome: React.FC = () => {
           <div className="animate-fade-in">
             <div className="text-center mb-8">
               <div className="flex justify-center mb-4">
-                <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-full">
-                  <Sparkles className="h-8 w-8 text-white" />
-                </div>
+              <div className="bg-gradient-card p-4 rounded-full">
+                <Sparkles className="h-8 w-8 text-white" />
+              </div>
               </div>
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
                 Generate Your Next
@@ -85,27 +87,27 @@ const LegacyHome: React.FC = () => {
             {/* Features Section */}
             <div className="mt-16 grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
               <div className="glass-effect rounded-lg p-6 text-center">
-                <div className="bg-blue-500/20 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="h-6 w-6 text-blue-400" />
+                <div className="bg-theme-primary/20 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="h-6 w-6 text-theme-primary" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">AI-Powered Ideas</h3>
-                <p className="text-gray-300">Advanced algorithms generate unique business concepts tailored to your preferences</p>
+                <p className="text-theme-secondary-text">Advanced algorithms generate unique business concepts tailored to your preferences</p>
               </div>
               
               <div className="glass-effect rounded-lg p-6 text-center">
-                <div className="bg-green-500/20 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="h-6 w-6 text-green-400" />
+                <div className="bg-theme-accent/20 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="h-6 w-6 text-theme-accent" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">Revenue Estimates</h3>
-                <p className="text-gray-300">Get detailed projections for daily, weekly, monthly, and yearly revenue potential</p>
+                <p className="text-theme-secondary-text">Get detailed projections for daily, weekly, monthly, and yearly revenue potential</p>
               </div>
               
               <div className="glass-effect rounded-lg p-6 text-center">
-                <div className="bg-purple-500/20 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="h-6 w-6 text-purple-400" />
+                <div className="bg-theme-secondary/20 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="h-6 w-6 text-theme-secondary" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">Tax Optimization</h3>
-                <p className="text-gray-300">State-specific tax implications and business-friendly location recommendations</p>
+                <p className="text-theme-secondary-text">State-specific tax implications and business-friendly location recommendations</p>
               </div>
             </div>
           </div>
@@ -138,7 +140,7 @@ const LegacyHome: React.FC = () => {
               <h3 className="text-2xl font-bold text-white mb-4">Want to explore more options?</h3>
               <button
                 onClick={handleGenerateAnother}
-                className="bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 px-8 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-700 transition-all duration-200 transform hover:scale-105"
+                className="bg-gradient-card text-white py-3 px-8 rounded-lg font-semibold hover:opacity-90 transition-all duration-200 transform hover:scale-105"
               >
                 Generate Another Idea
               </button>
@@ -171,6 +173,10 @@ function App() {
             <Route
               path="/"
               element={<LegacyHome />}
+            />
+            <Route
+              path="/themes"
+              element={<ThemeDemo />}
             />
             <Route
               path="/login"
@@ -229,6 +235,9 @@ function App() {
             }}
           />
           </div>
+          
+          {/* Floating Theme Switcher */}
+          <ThemeSwitcher variant="floating" />
         </Router>
       </AuthProvider>
     </ErrorBoundary>
